@@ -34,44 +34,111 @@ skills/dobot-magician/SKILL.md   agent skill: how an AI drives the arm safely
 - **Guard rails:** planar-reach and joint soft-limit checks before sending,
   alarm decode + auto-clear after every motion
 
-## Quick start
+## Getting started (step by step)
+
+You need: a Dobot Magician, its USB cable and 12 V power supply, and a Linux
+computer with Python 3.8+. No prior robotics or serial-port experience
+assumed.
+
+**1. Get the code and the one dependency**
 
 ```bash
+git clone https://github.com/magicsmokepress/dobot_magician_arm.git
+cd dobot_magician_arm
 pip install pyserial
-python3 driver/dobot.py        # read-only: prints port, pose, alarms
 ```
 
+(If `pip` isn't found, try `pip3` or `sudo apt install python3-pip` first.)
+
+**2. Plug in the arm**
+
+Connect the power supply, flip the power switch on the arm's base (you'll
+hear a beep), then connect the USB cable. Check Linux saw it:
+
+```bash
+ls /dev/ttyUSB*
+```
+
+You should see `/dev/ttyUSB0` (the arm's built-in USB-serial chip). If
+nothing appears, try another cable/port — some USB cables are charge-only.
+
+**3. Give yourself permission to use the port**
+
+Out of the box the port is root-only. Easiest fix:
+
+```bash
+sudo usermod -aG dialout $USER
+```
+
+then **log out and back in** (required — group changes don't apply to open
+sessions). Optional but nicer: install the udev rule below to get a stable
+`/dev/dobot` name that survives replugging:
+
+```bash
+echo 'SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", SYMLINK+="dobot", GROUP="plugdev", MODE="0660"' | sudo tee /etc/udev/rules.d/99-dobot.rules
+sudo udevadm control --reload && sudo udevadm trigger
+```
+
+**4. First contact (safe — nothing moves)**
+
+```bash
+python3 driver/dobot.py
+```
+
+Expected output, something like:
+
+```
+port: /dev/ttyUSB0 pose: {'x': 259.1, 'y': 0.0, 'z': -8.5, ...} alarms: none
+```
+
+This only *reads* from the arm. Opening the port never resets or moves it.
+If you got a pose, everything works — the rest is just Python.
+
+**5. First motion**
+
+⚠️ Clear everything within 35 cm of the base first — homing swings the arm
+through its full range. Then:
+
 ```python
+import sys; sys.path.insert(0, "driver")
 from dobot import Dobot
 
-d = Dobot()                    # /dev/dobot, falls back to /dev/ttyUSB0
-print(d.get_pose())
-d.home()                       # REQUIRED once after every power-up
-d.move_to(200, 0, 50)          # x, y, z in mm (r = wrist deg, default 0)
-d.jump_to(250, 80, -20)        # lift, travel over, descend
-d.grip(); d.release()
-d.run_sequence([               # queued: flows continuously
+d = Dobot()
+d.home()                 # REQUIRED once after every power-up (~20 s sweep)
+d.move_to(200, 0, 50)    # x=200mm forward, y=0 centered, z=50mm up
+d.move_to(200, 100, 50)  # slide left
+d.grip(); d.release()    # if the pneumatic gripper is attached
+d.close()
+```
+
+Every motion call returns the resulting pose and any alarms — an empty
+alarm list means the move really happened.
+
+**6. Going further**
+
+```python
+d.jump_to(250, 80, -20)        # pick-and-place arc: lift, travel over, descend
+d.run_sequence([               # queue a whole path; the arm flows through it
     ("jump", 250, 80, -20, 0),
     ("grip",),
     ("jump", 150, -80, -20, 0),
     ("release",),
 ])
-d.close()
 ```
 
-### Serial port setup (Linux)
+See the [agent skill](skills/dobot-magician/SKILL.md) for the full operating
+guide (coordinate frame, reachable envelope, pick/place recipes, alarm
+recovery) — it's written for AI agents but works just as well for humans.
 
-The arm's onboard CP2102N shows up as `/dev/ttyUSB0` (vid:pid `10c4:ea60`).
-For a stable name and non-root access:
+### Troubleshooting
 
-```bash
-# /etc/udev/rules.d/99-dobot.rules
-SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", SYMLINK+="dobot", GROUP="plugdev", MODE="0660"
-```
-
-then `sudo udevadm control --reload && sudo udevadm trigger`, and make sure
-your user is in `plugdev` (or `dialout` if you skip the rule). Opening the
-port does **not** reset the arm — reads are always safe.
+| Symptom | Fix |
+|---------|-----|
+| `No module named serial` | `pip install pyserial` (note: the package is **pyserial**, not "serial") |
+| `cannot open dobot port` / permission denied | Step 3 not done, or you didn't log out/in after it |
+| `/dev/ttyUSB0` missing | Charge-only USB cable, arm not powered on, or another program grabbed the port |
+| Arm connects but won't move | Check `d.decode_alarms()` — a latched alarm blocks all motion; `d.clear_alarms()` then retry. Also: did you `home()` after power-up? |
+| Move "succeeds" but arm doesn't go there | Target out of reach — see the envelope notes below; the returned `alarms` list will say `plan_inv_limit` |
 
 ## ⚠️ Safety
 
@@ -119,9 +186,17 @@ them, but they matter if you write your own:
 [`skills/dobot-magician/SKILL.md`](skills/dobot-magician/SKILL.md) packages the
 operating knowledge — connection, safety rules, motion primitives, pick-and-
 place recipes, alarm recovery — so an AI agent can drive the arm through this
-driver. Install it standalone by copying the folder into `.claude/skills/`, or
-as a plugin via the [ai-toolbox](https://github.com/magicsmokepress/ai-toolbox)
-marketplace.
+driver. To install it in Claude Code, run these two commands inside Claude
+Code itself:
+
+```
+/plugin marketplace add magicsmokepress/ai-toolbox
+/plugin install dobot-magician@ai-toolbox
+```
+
+Then just ask the agent to move the arm. (Alternative without the
+marketplace: copy the `skills/dobot-magician/` folder into your project's
+`.claude/skills/` directory.)
 
 ## Prior art
 
