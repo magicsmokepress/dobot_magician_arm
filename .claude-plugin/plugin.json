@@ -1,0 +1,10 @@
+{
+  "name": "dobot-magician",
+  "version": "1.0.0",
+  "description": "Drive a Dobot Magician 4-DOF robotic arm from an AI agent over USB serial — pure-Python driver plus a safety-first operating skill.",
+  "author": {
+    "name": "magicsmokepress",
+    "url": "https://github.com/magicsmokepress"
+  },
+  "homepage": "https://github.com/magicsmokepress/dobot_magician_arm"
+}
