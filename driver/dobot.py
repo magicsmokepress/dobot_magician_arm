@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""dobot.py - Dobot Magician driver (protocol V1.1.5). Validated vs SN DT1421057217.
+"""dobot.py - Dobot Magician driver, implementing the Dobot Communication Protocol V1.1.5
+(command IDs, framing, checksum and alarm codes from that document). Validated on a production arm.
 Reads are safe; home/move/servo/suction actuate hardware - clear the workspace.
 Port: /dev/dobot (udev) else /dev/ttyUSB0. pyserial>=3.5."""
 import os, struct, time, threading, math

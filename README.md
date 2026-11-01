@@ -228,4 +228,16 @@ the arm.
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE). This is AI-assisted work.
+
+Third-party work this repo depends on or references. Nothing from any of it
+is vendored here.
+
+| What | Role here | Licence |
+|---|---|---|
+| [pyserial](https://github.com/pyserial/pyserial) | the only runtime dependency | BSD-3-Clause |
+| [Dobot Magician Communication Protocol V1.1.5](https://download.dobot.cc/product-manual/dobot-magician/pdf/en/Dobot-Communication-Protocol-V1.1.5.pdf) | the command IDs, frame format, checksum and alarm codes the driver implements | Dobot's documentation; no text reproduced |
+| [luismesas/pydobot](https://github.com/luismesas/pydobot), [sammydick22/pydobotplus](https://github.com/sammydick22/pydobotplus), [AlexGustafsson/dobot-python](https://github.com/AlexGustafsson/dobot-python), [jkaniuka/magician_ros2](https://github.com/jkaniuka/magician_ros2) | prior art, compared above; no code taken from any of them | MIT, MIT, MIT, MIT |
+
+Dobot and Dobot Magician are trademarks of Shenzhen Yuejiang Technology Co.,
+Ltd. This project is not affiliated with or endorsed by Dobot.
